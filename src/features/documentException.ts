@@ -60,6 +60,9 @@ export default class DocumentExceptionProvider implements vscode.CodeActionProvi
        let edit = new vscode.WorkspaceEdit();
 
        var edits = [];
+
+        var method = this.findMethodFromLine(arg.document, arg.lineNumber);
+
        var exceptionType = this.getExceptionTypeFromText(arg.throwText);
        var addexceptionComments = new vscode.TextEdit(arg.range, `/// <exception cref="${exceptionType}"></exception>`);
        edits.push(addexceptionComments);
@@ -78,6 +81,30 @@ export default class DocumentExceptionProvider implements vscode.CodeActionProvi
         return "";
     }
 
+    private findMethodFromLine(document:vscode.TextDocument, lineNo:number) : CSharpClassDefinition {
+        var omnisharp = vscode.extensions.getExtension("ms-vscode.csharp");
+        if(omnisharp)
+        {
+            //todo: need to find a way to query the c# parser to find the method declaration for the current code block.    
+        }
+        var classRegex = new RegExp(/(private|internal|public|protected)\s?(static)?\sclass\s(\w*)/g);        
+        while(lineNo > 0){
+            var line = document.lineAt(lineNo);
+            let match;
+            if((match = classRegex.exec(line.text))){                
+                return {
+                    startLine: lineNo,
+                    endLine: -1,
+                    className: match[3],
+                    modifier: match[1],
+                    statement: match[0]
+                };
+            }
+            lineNo -=1;
+        }
+        return null;
+    }
+
 }
 
 interface GenerateExceptionDocumentationProperties {
@@ -85,4 +112,12 @@ interface GenerateExceptionDocumentationProperties {
     lineNumber: number,
     throwText: string,
     range: vscode.Range
+}
+
+interface CSharpClassDefinition {
+    startLine: number,
+    endLine: number,
+    className: string,
+    modifier: string,
+    statement: string
 }
